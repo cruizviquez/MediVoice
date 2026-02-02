@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MedVoice Intake Agent Demo</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; max-width: 900px; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    button { padding: 10px 14px; cursor: pointer; }
+    textarea { width: 100%; min-height: 120px; }
+    pre { white-space: pre-wrap; word-break: break-word; padding: 12px; border: 1px solid #ddd; border-radius: 8px; }
+    .hint { color: #555; }
+  </style>
+</head>
+<body>
+  <h2>MedVoice Intake Agent (Voice → Transcript → MTM Triage)</h2>
+  <p class="hint">
+    This is a demo intake tool for pharmacist outreach triage. It does <b>not</b> provide medical advice.
+  </p>
+
+  <div class="row">
+    <button id="start">Start recording</button>
+    <button id="stop" disabled>Stop</button>
+    <button id="send" disabled>Send to /voice-intake</button>
+  </div>
+
+  <p class="hint">Tip: speak a short message like “I stopped taking metformin because it makes me dizzy.”</p>
+
+  <h3>Result</h3>
+  <pre id="out">Waiting…</pre>
+
+<script>
+  let mediaRecorder;
+  let chunks = [];
+  let blob;
+
+  const startBtn = document.getElementById('start');
+  const stopBtn  = document.getElementById('stop');
+  const sendBtn  = document.getElementById('send');
+  const out      = document.getElementById('out');
+
+  function setOut(obj) {
+    out.textContent = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
+  }
+
+  startBtn.onclick = async () => {
+    chunks = [];
+    blob = null;
+    setOut("Recording…");
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = () => {
+      blob = new Blob(chunks, { type: 'audio/webm' });
+      setOut("Recorded. Click “Send” to analyze.");
+      sendBtn.disabled = false;
+      stream.getTracks().forEach(t => t.stop());
+    };
+
+    mediaRecorder.start();
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    sendBtn.disabled = true;
+  };
+
+  stopBtn.onclick = () => {
+    mediaRecorder.stop();
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+  };
+
+  sendBtn.onclick = async () => {
+    if (!blob) return;
+    setOut("Uploading and analyzing…");
+
+    const form = new FormData();
+    form.append("audio", blob, "recording.webm");
+
+    const res = await fetch("/voice-intake", { method: "POST", body: form });
+    const data = await res.json();
+    setOut(data);
+  };
+</script>
+</body>
+</html>
