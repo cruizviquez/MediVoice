@@ -1,0 +1,47 @@
+{
+  "transcript": "Hi, this is Carl Reiss and my date of birthday is July 28, 1995 and I'm calling because I stopped taking meds for me because it makes me dizzy",
+  "language": "en",
+  "result": {
+    "intent": "adherence_issue",
+    "risk_level": "medium",
+    "key_facts": [
+      "[REDACTED_NAME] stopped taking their medication due to dizziness.",
+      "Medication: [REDACTED_Medication_Name]"
+    ],
+    "medications": [
+      {
+        "name": "[REDACTED_Medication_Name]",
+        "issue": "dizziness"
+      }
+    ],
+    "recommended_next_step": "Pharmacist outreach within 24 hours to address side-effect concern and adherence barrier.",
+    "safe_patient_reply": "Please speak with the pharmacist when they call you. They will further discuss your concerns. If symptoms worsen or you feel unsafe, please seek urgent care.",
+    "soap_note": {
+      "subjective": "[REDACTED_NAME] is having issues with dizziness after taking their medication.",
+      "objective": "Not available (voice-only intake).",
+      "assessment": "[REDACTED_NAME] stopped taking their medication due to dizziness.",
+      "plan": "The pharmacist will review this with [REDACTED_NAME] and discuss any alternatives."
+    },
+    "pharmacist_task": {
+      "queue": "side_effect_followup",
+      "priority": "high",
+      "due_in_hours": 24,
+      "summary": "[REDACTED_NAME] has an adherence issue with their medication.",
+      "tags": [
+        "side_effects",
+        "adherence",
+        "redacted"
+      ]
+    },
+    "safety": {
+      "red_flag_detected": false,
+      "red_flag_signals": [],
+      "advice_violation": false
+    }
+  },
+  "redaction_tags": [
+    "REDACTED_DATE",
+    "REDACTED_NAME"
+  ],
+  "created_at": "2026-02-04T16:46:12.962719+00:00"
+}
