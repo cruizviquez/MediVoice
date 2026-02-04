@@ -12,8 +12,20 @@ DOB_RE = re.compile(r"\b(?:DOB|Date of Birth)\s*[:#]?\s*\d{1,2}[/-]\d{1,2}[/-]\d
 # loose date patterns like 01/02/2024 or 1-2-24
 DATE_RE = re.compile(r"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b")
 
-# naive address-ish patterns (demo only)
-ADDRESS_RE = re.compile(r"\b\d{1,6}\s+[A-Z0-9][A-Z0-9\s.-]{2,}\b", re.IGNORECASE)
+# month-name dates like "January 15, 2024" or "Feb 3rd 2024"
+MONTH_DATE_RE = re.compile(
+    r"\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?"
+    r"|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+    r"\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{2,4})\b",
+    re.IGNORECASE
+)
+
+# stricter address pattern (requires street suffix)
+ADDRESS_RE = re.compile(
+    r"\b\d{1,6}\s+(?:[A-Z0-9]+\s+){0,6}"
+    r"(?:st|street|ave|avenue|rd|road|blvd|boulevard|ln|lane|dr|drive|ct|court)\b",
+    re.IGNORECASE
+)
 
 # Names are hard to redact safely with regex. For demo:
 # remove "My name is X" and "This is X" patterns.
@@ -46,6 +58,7 @@ def redact_phi(text: str) -> Tuple[str, list[str]]:
     s = sub(SSN_RE, "SSN", s)
     s = sub(MRN_RE, "MEMBER_ID", s)
     s = sub(DOB_RE, "DOB", s)
+    s = sub(MONTH_DATE_RE, "DATE", s)
     s = sub(DATE_RE, "DATE", s)
 
     # Address last because it's broad
