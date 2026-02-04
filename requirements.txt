@@ -5,6 +5,8 @@ python-multipart>=0.0.9
 httpx>=0.27
 soundfile>=0.12.1
 numpy>=1.24
+openai
+python-dotenv
 
 # Optional (pick ONE for local STT):
 # faster-whisper>=1.0.3
