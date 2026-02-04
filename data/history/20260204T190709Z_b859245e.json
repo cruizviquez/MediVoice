@@ -1,0 +1,43 @@
+{
+  "transcript": "Hi, I just stopped taking metformin because it makes me dizzy",
+  "language": "en",
+  "result": {
+    "intent": "side_effects",
+    "risk_level": "medium",
+    "key_facts": [
+      "Patient stopped taking metformin due to dizziness"
+    ],
+    "medications": [
+      {
+        "name": "metformin",
+        "issue": "dizziness"
+      }
+    ],
+    "recommended_next_step": "Pharmacist outreach within 24 hours to address side-effect concern and adherence barrier.",
+    "safe_patient_reply": "Thank you for sharing this information. We will follow up with our pharmacist shortly. If symptoms worsen or you feel unsafe, please seek urgent care.",
+    "soap_note": {
+      "subjective": "Patient stopped metformin due to dizziness",
+      "objective": "Not available (voice-only intake)",
+      "assessment": "Pending pharmacist review.",
+      "plan": "Pharmacist to review transcript and follow up with patient."
+    },
+    "pharmacist_task": {
+      "queue": "side_effect_followup",
+      "priority": "high",
+      "due_in_hours": 24,
+      "summary": "Patient report of metformin side effect (dizziness)",
+      "tags": [
+        "medication_side_effects",
+        "side_effects",
+        "adherence"
+      ]
+    },
+    "safety": {
+      "red_flag_detected": false,
+      "red_flag_signals": [],
+      "advice_violation": false
+    }
+  },
+  "redaction_tags": [],
+  "created_at": "2026-02-04T19:07:09.202926+00:00"
+}

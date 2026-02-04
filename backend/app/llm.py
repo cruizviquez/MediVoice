@@ -145,6 +145,11 @@ def _fallback_result(transcript: str, redaction_tags: list[str]) -> Dict[str, An
             "due_in_hours": 72,
             "summary": "Pharmacist follow-up needed (fallback mode).",
             "tags": ["fallback"] + (["redacted"] if redaction_tags else [])
+        },
+        "safety": {
+            "red_flag_detected": False,
+            "red_flag_signals": [],
+            "advice_violation": False
         }
     }
 
@@ -277,6 +282,25 @@ def _analyze_sync(raw_transcript: str, schema_json: Dict[str, Any]) -> Tuple[Dic
         print(f"[llm] Groq API failed after {error_time:.2f}s: {repr(e)}")
         result = _fallback_result(redacted_transcript, redaction_tags)
         return result, redaction_tags
+
+    # Ensure required fields have defaults if missing or None
+    if not data.get("recommended_next_step"):
+        data["recommended_next_step"] = "Pharmacist follow-up required to review and address patient concern."
+    
+    soap_note = data.get("soap_note") or {}
+    if not soap_note.get("assessment"):
+        soap_note["assessment"] = "Pending pharmacist review."
+    if not soap_note.get("plan"):
+        soap_note["plan"] = "Pharmacist to review transcript and follow up with patient."
+    data["soap_note"] = soap_note
+    
+    # Ensure safety field exists
+    if not data.get("safety"):
+        data["safety"] = {
+            "red_flag_detected": False,
+            "red_flag_signals": [],
+            "advice_violation": False
+        }
 
     # 3) Post-process safety & ops routing
     post_start = time.time()
