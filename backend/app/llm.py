@@ -5,13 +5,8 @@ import os
 from typing import Any, Dict
 
 from starlette.concurrency import run_in_threadpool
-from openai import OpenAI
 
 from .redact import redact_phi
-
-# Model can be configured via env var; defaults to a good demo choice.
-DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-
 
 SYSTEM_PROMPT = (
     "You are a clinical operations assistant supporting a Medication Therapy Management (MTM) team.\n"
@@ -20,17 +15,19 @@ SYSTEM_PROMPT = (
     "Safety rules:\n"
     "- If transcript includes red-flag symptoms (e.g., chest pain, trouble breathing, severe allergic reaction), set:\n"
     "  risk_level='high', pharmacist_task.queue='urgent_escalation', pharmacist_task.priority='urgent', due_in_hours=1,\n"
-    "  and safe_patient_reply must instruct urgent care / emergency services.\n"
-    "- Otherwise, provide a cautious, non-medical safe_patient_reply.\n\n"
+    "  and safe_patient_reply must instruct urgent care / emergency services.\n\n"
     "Output rules:\n"
     "- Return ONLY JSON that matches the IntakeResult schema provided.\n"
     "- Do not wrap JSON in markdown.\n"
 )
 
+DEFAULT_OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+DEFAULT_GROQ_MODEL = os.getenv("GROQ_MODEL", "llama3-70b-8192")
+
 def _fallback_result(transcript: str, redaction_tags: list[str]) -> Dict[str, Any]:
-    """Safe deterministic fallback if OPENAI_API_KEY is missing or the API call fails."""
     t = (transcript or "").strip()
     return {
+        "agent_backend_used": "fallback",
         "intent": "unknown" if len(t.split()) < 4 else "general_question",
         "risk_level": "low",
         "key_facts": [t] if t else [],
@@ -56,9 +53,8 @@ def _fallback_result(transcript: str, redaction_tags: list[str]) -> Dict[str, An
     }
 
 def _build_user_prompt(redacted_transcript: str, schema_json: Dict[str, Any], redaction_tags: list[str]) -> str:
-    # We do NOT include raw PHI. We optionally tell the model that some identifiers were redacted.
     redaction_note = (
-        f"Note: Identifiers were redacted before analysis. Redaction tags present: {redaction_tags}\n\n"
+        f"Note: identifiers were redacted. Tags present: {redaction_tags}\n\n"
         if redaction_tags else ""
     )
     return (
@@ -70,45 +66,56 @@ def _build_user_prompt(redacted_transcript: str, schema_json: Dict[str, Any], re
         "Return ONLY JSON."
     )
 
-def _call_openai_sync(transcript: str, schema_json: Dict[str, Any]) -> Dict[str, Any]:
-    # 1) Redact PHI BEFORE calling any external model
-    redacted_transcript, redaction_tags = redact_phi(transcript or "")
+def _call_openai(transcript: str, schema_json: Dict[str, Any], redaction_tags: list[str]) -> Dict[str, Any]:
+    from openai import OpenAI
 
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        return _fallback_result(redacted_transcript, redaction_tags)
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    resp = client.chat.completions.create(
+        model=DEFAULT_OPENAI_MODEL,
+        response_format={"type": "json_object"},
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": _build_user_prompt(transcript, schema_json, redaction_tags)},
+        ],
+    )
+    content = (resp.choices[0].message.content or "").strip()
+    data = json.loads(content)
+    data["agent_backend_used"] = "openai"
+    return data
 
-    client = OpenAI(api_key=api_key)
-    model = DEFAULT_MODEL
+def _call_groq(transcript: str, schema_json: Dict[str, Any], redaction_tags: list[str]) -> Dict[str, Any]:
+    from groq import Groq
 
+    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    resp = client.chat.completions.create(
+        model=DEFAULT_GROQ_MODEL,
+        response_format={"type": "json_object"},
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": _build_user_prompt(transcript, schema_json, redaction_tags)},
+        ],
+    )
+    content = (resp.choices[0].message.content or "").strip()
+    data = json.loads(content)
+    data["agent_backend_used"] = "groq"
+    return data
+
+def _analyze_sync(raw_transcript: str, schema_json: Dict[str, Any]) -> Dict[str, Any]:
+    redacted, tags = redact_phi(raw_transcript or "")
+
+    # Prefer Groq if present; else OpenAI; else fallback
     try:
-        resp = client.chat.completions.create(
-            model=model,
-            response_format={"type": "json_object"},
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": _build_user_prompt(redacted_transcript, schema_json, redaction_tags)},
-            ],
-        )
-        content = (resp.choices[0].message.content or "").strip()
-        data = json.loads(content)
-
-        # Optional: add a lightweight tag to task tags to show redaction happened (no PHI leaked).
-        # Only if the schema allows it (it does in your PharmacistTask.tags list).
-        try:
-            if redaction_tags:
-                data.setdefault("pharmacist_task", {}).setdefault("tags", [])
-                if "redacted" not in data["pharmacist_task"]["tags"]:
-                    data["pharmacist_task"]["tags"].append("redacted")
-        except Exception:
-            pass
-
-        return data
-
-    except Exception:
-        # If OpenAI fails for any reason, keep the pipeline working safely.
-        return _fallback_result(redacted_transcript, redaction_tags)
+        if os.getenv("GROQ_API_KEY"):
+            print("LLM backend: groq")
+            return _call_groq(redacted, schema_json, tags)
+        if os.getenv("OPENAI_API_KEY"):
+            print("LLM backend: openai")
+            return _call_openai(redacted, schema_json, tags)
+        print("LLM backend: fallback (no keys)")
+        return _fallback_result(redacted, tags)
+    except Exception as e:
+        print("LLM_CALL_FAILED:", repr(e))
+        return _fallback_result(redacted, tags)
 
 async def analyze_transcript(transcript: str, schema_json: Dict[str, Any]) -> Dict[str, Any]:
-    # OpenAI SDK call is sync; run it in a threadpool so FastAPI stays responsive.
-    return await run_in_threadpool(_call_openai_sync, transcript, schema_json)
+    return await run_in_threadpool(_analyze_sync, transcript, schema_json)

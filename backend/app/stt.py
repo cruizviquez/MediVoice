@@ -24,7 +24,7 @@ async def transcribe_file(filepath: str) -> Tuple[str, Optional[str]]:
     # Try openai-whisper (the open-source package)
     try:
         import whisper  # type: ignore
-        model = whisper.load_model("small")
+        model = whisper.load_model("medium")
         result = model.transcribe(filepath)
         text = (result.get("text") or "").strip()
         return text, result.get("language")
