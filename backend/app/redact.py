@@ -1,5 +1,6 @@
 # backend/app/redact.py
 from __future__ import annotations
+
 import re
 from typing import Tuple
 
@@ -27,18 +28,21 @@ ADDRESS_RE = re.compile(
     re.IGNORECASE
 )
 
-# Names are hard to redact safely with regex. For demo:
-# remove "My name is X" and "This is X" patterns.
+# Name hints for demo (English + Spanish).
+# This catches "My name is Carlos Ruiz", "I'm Carlos Ruiz", "Me llamo Carlos Ruiz", "Soy Carlos Ruiz", etc.
 NAME_HINT_RE = re.compile(
-    r"\b(?:my name is|this is|i am|i'm)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\b"
+    r"\b(?:my name is|this is|i am|i'm|me llamo|mi nombre es|soy)\s+"
+    r"([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+){0,2})\b",
+    re.IGNORECASE
 )
+
 
 def redact_phi(text: str) -> Tuple[str, list[str]]:
     """
     Returns (redacted_text, tags_found).
     Demo-level redaction. For production, use an NLP PHI detector (e.g., Presidio) + review.
     """
-    tags = []
+    tags: list[str] = []
 
     def sub(pattern: re.Pattern, tag: str, s: str) -> str:
         nonlocal tags
@@ -48,10 +52,11 @@ def redact_phi(text: str) -> Tuple[str, list[str]]:
 
     s = text or ""
 
-    # Name hints first (case-sensitive by design)
+    # Name hints first
     if NAME_HINT_RE.search(s):
         tags.append("NAME")
-        s = NAME_HINT_RE.sub(lambda m: m.group(0).split(m.group(1))[0] + "[NAME]", s)
+        # Replace just the name portion with [NAME]
+        s = NAME_HINT_RE.sub(lambda m: m.group(0).replace(m.group(1), "[NAME]"), s)
 
     s = sub(EMAIL_RE, "EMAIL", s)
     s = sub(PHONE_RE, "PHONE", s)
@@ -64,4 +69,5 @@ def redact_phi(text: str) -> Tuple[str, list[str]]:
     # Address last because it's broad
     s = sub(ADDRESS_RE, "ADDRESS", s)
 
-    return s, sorted(set(tags))
+
+    return s, sorted([f"REDACTED_{tag}" for tag in set(tags)])

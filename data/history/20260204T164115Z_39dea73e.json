@@ -1,0 +1,43 @@
+{
+  "transcript": "Hi, this is Carlos Ruiz and I stop taking meth for me because it makes me dizzy",
+  "language": "en",
+  "result": {
+    "intent": "unknown",
+    "risk_level": "low",
+    "key_facts": [
+      "Patient stopped taking meth due to side effects"
+    ],
+    "medications": [
+      {
+        "name": "meth",
+        "issue": "dizziness"
+      }
+    ],
+    "recommended_next_step": "Review medication list with pharmacist",
+    "safe_patient_reply": "Thank you for sharing your concerns. Our pharmacist will review your medication list and get in touch with you soon. If symptoms worsen or you feel unsafe, please seek urgent care.",
+    "soap_note": {
+      "subjective": "Patient reported stopping meth due to side effects",
+      "objective": "Not available (voice-only intake)",
+      "assessment": "Patient stopped taking medication due to side effects",
+      "plan": "Review medication list with pharmacist"
+    },
+    "pharmacist_task": {
+      "queue": "side_effect_followup",
+      "priority": "normal",
+      "due_in_hours": 24,
+      "summary": "Review patient's medication list after self-reported discontinuation of meth due to side effects.",
+      "tags": [
+        "redacted"
+      ]
+    },
+    "safety": {
+      "red_flag_detected": false,
+      "red_flag_signals": [],
+      "advice_violation": false
+    }
+  },
+  "redaction_tags": [
+    "REDACTED_NAME"
+  ],
+  "created_at": "2026-02-04T16:41:15.387385+00:00"
+}

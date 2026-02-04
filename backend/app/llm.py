@@ -3,15 +3,15 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from typing import Any, Dict, Tuple
 
 from starlette.concurrency import run_in_threadpool
 
 from .redact import redact_phi
 
-# Models configurable via env vars
-DEFAULT_GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")  
-DEFAULT_OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+# Groq model configurable via env var
+DEFAULT_GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
 
 SYSTEM_PROMPT = (
     "You are a clinical operations assistant supporting a Medication Therapy Management (MTM) team.\n"
@@ -23,24 +23,50 @@ SYSTEM_PROMPT = (
     "- If transcript includes red-flag symptoms (e.g., chest pain, trouble breathing, severe allergic reaction), set:\n"
     "  risk_level='high', pharmacist_task.queue='urgent_escalation', pharmacist_task.priority='urgent', due_in_hours=1,\n"
     "  and safe_patient_reply must instruct urgent care / emergency services.\n"
-    "- Otherwise safe_patient_reply MUST be operational only: acknowledgement + pharmacist follow-up + escalation guidance.\n\n"
+    "- Otherwise safe_patient_reply MUST be operational only: acknowledgement + pharmacist follow-up.\n\n"
     "Output rules:\n"
     "- Return ONLY JSON that matches the IntakeResult schema provided.\n"
     "- Do not wrap JSON in markdown.\n"
 )
 
-# Phrases that often cause unsafe "medical advice" in patient replies
+# Patterns that often create unsafe medical advice in a patient-facing reply
 _ADVICE_PATTERNS = [
     r"\bdon't stop\b", r"\bdo not stop\b", r"\bstop taking\b", r"\bstart taking\b",
     r"\bcontinue taking\b", r"\bincrease\b", r"\bdecrease\b",
     r"\bchange (?:your|the) dose\b", r"\byou should\b", r"\byou shouldn't\b",
     r"\btake (?:your|the)\b",
     r"\bnot the right medication\b", r"\balternatives?\b", r"\bswitch\b", r"\bchange to\b",
+    r"\bpossible alternatives\b", r"\btry a different\b",
 ]
 
-def sanitize_safe_reply(text: str, risk_level: str) -> str:
+# Very lightweight symptom heuristics (for demo)
+_SYMPTOM_KEYWORDS = [
+    "dizzy", "dizziness", "nausea", "vomit", "rash", "hives",
+    "headache", "pain", "fever", "swelling", "short of breath",
+    "trouble breathing", "can't breathe", "cannot breathe", "chest pain",
+    "faint", "passed out", "bleeding"
+]
+
+_RED_FLAG_KEYWORDS = [
+    "chest pain", "trouble breathing", "can't breathe", "cannot breathe",
+    "fainting", "passed out", "severe allergic", "anaphyl", "swelling of face"
+]
+
+
+def _has_symptoms(t: str) -> bool:
+    tl = (t or "").lower()
+    return any(k in tl for k in _SYMPTOM_KEYWORDS)
+
+
+def _has_red_flags(t: str) -> bool:
+    tl = (t or "").lower()
+    return any(k in tl for k in _RED_FLAG_KEYWORDS)
+
+
+def sanitize_safe_reply(text: str, risk_level: str, has_symptoms: bool) -> str:
     """
-    Ensure patient reply is operational and non-clinical.
+    Ensure safe_patient_reply is operational and non-clinical.
+    Only include urgent-care language if (a) high risk or (b) symptoms present.
     """
     t = (text or "").strip()
     if not t:
@@ -55,19 +81,24 @@ def sanitize_safe_reply(text: str, risk_level: str) -> str:
                 "If you have severe symptoms such as chest pain, trouble breathing, fainting, "
                 "or you feel unsafe, please seek urgent care or call emergency services right away."
             )
-        return (
-            "Thanks for letting us know. A pharmacist will follow up to review your medication concern and discuss next steps. "
-            "If symptoms worsen or you feel unsafe, please seek urgent care."
+        # Medium/low: no med advice; operational only
+        out = (
+            "Thanks for letting us know. A pharmacist will follow up to review your medication concern and discuss next steps."
         )
+        if has_symptoms:
+            out += " If symptoms worsen or you feel unsafe, please seek urgent care."
+        return out
 
-    # Add safety line if missing
+    # If it looks okay but is missing safety guidance, add it conditionally
     if risk_level == "high":
         if "emergency" not in lower and "urgent care" not in lower:
             t += " If you feel unsafe or have severe symptoms, please seek urgent care or call emergency services."
     else:
-        if "urgent care" not in lower and "feel unsafe" not in lower:
+        # Only append this if symptoms exist (avoid weird messaging for admin-only calls)
+        if has_symptoms and ("urgent care" not in lower and "feel unsafe" not in lower):
             t += " If symptoms worsen or you feel unsafe, please seek urgent care."
     return t
+
 
 def _build_user_prompt(redacted_transcript: str, schema_json: Dict[str, Any], redaction_tags: list[str]) -> str:
     redaction_note = (
@@ -84,11 +115,13 @@ def _build_user_prompt(redacted_transcript: str, schema_json: Dict[str, Any], re
         "Return ONLY JSON."
     )
 
+
 def _fallback_result(transcript: str, redaction_tags: list[str]) -> Dict[str, Any]:
     """
-    Safe deterministic fallback if no keys or API fails.
+    Safe deterministic fallback if no GROQ key or API fails.
     """
     t = (transcript or "").strip()
+    sym = _has_symptoms(t)
     return {
         "intent": "unknown" if len(t.split()) < 4 else "general_question",
         "risk_level": "low",
@@ -98,6 +131,7 @@ def _fallback_result(transcript: str, redaction_tags: list[str]) -> Dict[str, An
         "safe_patient_reply": sanitize_safe_reply(
             "Thanks for letting us know. A pharmacist will follow up to review your concern.",
             "low",
+            sym,
         ),
         "soap_note": {
             "subjective": t or "Patient left a message requesting assistance.",
@@ -114,6 +148,7 @@ def _fallback_result(transcript: str, redaction_tags: list[str]) -> Dict[str, An
         }
     }
 
+
 def normalize_task_and_routing(data: Dict[str, Any], redacted_transcript: str) -> Dict[str, Any]:
     """
     Post-processing guardrails so ops routing makes sense even if LLM output is slightly off.
@@ -122,25 +157,20 @@ def normalize_task_and_routing(data: Dict[str, Any], redacted_transcript: str) -
     intent = data.get("intent", "unknown")
     risk = data.get("risk_level", "low")
 
-    # detect critical red flags
-    red_flags = any(k in t for k in [
-        "chest pain", "trouble breathing", "can't breathe", "cannot breathe",
-        "fainting", "passed out", "severe allergic", "swelling of face", "swelling", "anaphyl"
-    ])
+    red_flags = _has_red_flags(t)
 
-    # detect discontinuation / adherence interruption + side effect language
-    stopped = any(k in t for k in ["stopped taking", "stop taking", "i stopped", "i stopped taking", "not taking", "quit taking"])
+    # discontinuation / adherence interruption + side effect language
+    stopped = any(k in t for k in ["stopped taking", "i stopped", "not taking", "quit taking"])
     side_effect_words = any(k in t for k in ["dizzy", "dizziness", "nausea", "rash", "side effect", "makes me", "headache"])
 
     task = data.get("pharmacist_task") or {}
-    # Ensure required keys exist if missing
     task.setdefault("queue", "mtm_outreach")
     task.setdefault("priority", "normal")
     task.setdefault("due_in_hours", 72)
     task.setdefault("summary", "Pharmacist follow-up required.")
     task.setdefault("tags", [])
 
-    # Strict red-flag escalation
+    # 1) Strict red-flag escalation ALWAYS wins
     if red_flags:
         data["risk_level"] = "high"
         task["queue"] = "urgent_escalation"
@@ -149,21 +179,42 @@ def normalize_task_and_routing(data: Dict[str, Any], redacted_transcript: str) -
         if "red_flag" not in task["tags"]:
             task["tags"].append("red_flag")
         data["recommended_next_step"] = data.get("recommended_next_step") or "Escalate immediately per protocol."
-    
-    # Downgrade accidental urgent tasks if no red flags
-    if not red_flags and task.get("queue") == "urgent_escalation":
-        task["queue"] = "side_effect_followup" if side_effect_words or stopped else "mtm_outreach"
-        task["priority"] = "high" if (stopped and side_effect_words) else "normal"
-        task["due_in_hours"] = 24 if (stopped and side_effect_words) else 72
-    
-    elif stopped and side_effect_words:
-        # Operationally: this is a side effect follow-up with adherence barrier
+        data["pharmacist_task"] = task
+        return data
+
+    # 2) If model accidentally set urgent_escalation without red flags, downgrade,
+    #    but still apply side-effect/adherence logic if relevant.
+    if task.get("queue") == "urgent_escalation":
+        if side_effect_words or stopped:
+            task["queue"] = "side_effect_followup"
+            task["priority"] = "high"
+            task["due_in_hours"] = 24
+            if "side_effects" not in task["tags"]:
+                task["tags"].append("side_effects")
+            if stopped and "adherence" not in task["tags"]:
+                task["tags"].append("adherence")
+            if intent == "general_question":
+                data["intent"] = "side_effects"
+            data["risk_level"] = "medium"
+            data["recommended_next_step"] = (
+                "Pharmacist outreach within 24 hours to address side-effect concern and adherence barrier."
+            )
+        else:
+            task["queue"] = "mtm_outreach"
+            task["priority"] = "normal"
+            task["due_in_hours"] = 72
+
+        data["pharmacist_task"] = task
+        return data
+
+    # 3) Side effects + stopped meds: high-value workflow
+    if stopped and side_effect_words:
         task["queue"] = "side_effect_followup"
         task["priority"] = "high"
         task["due_in_hours"] = min(int(task.get("due_in_hours", 24)), 24)
         if intent == "general_question":
             data["intent"] = "side_effects"
-        # Keep adherence_issue if you want; both are defensible.
+        data["risk_level"] = "medium"
         data["recommended_next_step"] = (
             "Pharmacist outreach within 24 hours to address side-effect concern and adherence barrier."
         )
@@ -171,29 +222,15 @@ def normalize_task_and_routing(data: Dict[str, Any], redacted_transcript: str) -
             task["tags"].append("side_effects")
         if "adherence" not in task["tags"]:
             task["tags"].append("adherence")
-    else:
-        # If intent indicates meaningful follow-up, tighten SLA a bit
-        if intent in ("adherence_issue", "side_effects"):
-            task["priority"] = "high" if task.get("priority") in ("normal", "low") else task.get("priority")
-            task["due_in_hours"] = min(int(task.get("due_in_hours", 24)), 24)
+
+    # 4) If intent indicates meaningful follow-up, tighten SLA
+    elif intent in ("adherence_issue", "side_effects"):
+        task["priority"] = "high" if task.get("priority") in ("normal", "low") else task.get("priority")
+        task["due_in_hours"] = min(int(task.get("due_in_hours", 24)), 24)
 
     data["pharmacist_task"] = task
     return data
 
-def _call_openai(redacted_transcript: str, schema_json: Dict[str, Any], redaction_tags: list[str]) -> Dict[str, Any]:
-    from openai import OpenAI
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-    resp = client.chat.completions.create(
-        model=DEFAULT_OPENAI_MODEL,
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": _build_user_prompt(redacted_transcript, schema_json, redaction_tags)},
-        ],
-    )
-    content = (resp.choices[0].message.content or "").strip()
-    return json.loads(content)
 
 def _call_groq(redacted_transcript: str, schema_json: Dict[str, Any], redaction_tags: list[str]) -> Dict[str, Any]:
     from groq import Groq
@@ -210,41 +247,72 @@ def _call_groq(redacted_transcript: str, schema_json: Dict[str, Any], redaction_
     content = (resp.choices[0].message.content or "").strip()
     return json.loads(content)
 
-def _analyze_sync(raw_transcript: str, schema_json: Dict[str, Any]) -> Dict[str, Any]:
-    # 1) Redact PHI BEFORE any external call
-    redacted_transcript, redaction_tags = redact_phi(raw_transcript or "")
 
-    # 2) Choose backend
+
+def _analyze_sync(raw_transcript: str, schema_json: Dict[str, Any]) -> Tuple[Dict[str, Any], list[str]]:
+    start_time = time.time()
+    
+    # 1) Redact PHI BEFORE any external call
+    redaction_start = time.time()
+    redacted_transcript, redaction_tags = redact_phi(raw_transcript or "")
+    redaction_time = time.time() - redaction_start
+    print(f"[llm] Redaction complete: {redaction_time:.2f}s")
+
+    # 2) Groq-only backend
+    if not os.getenv("GROQ_API_KEY"):
+        print("[llm] Using fallback (no GROQ_API_KEY found)")
+        result = _fallback_result(redacted_transcript, redaction_tags)
+        total_time = time.time() - start_time
+        print(f"[llm] Total analysis time: {total_time:.2f}s")
+        return result, redaction_tags
+
     try:
-        if os.getenv("GROQ_API_KEY"):
-            print("LLM backend: groq")
-            data = _call_groq(redacted_transcript, schema_json, redaction_tags)
-        elif os.getenv("OPENAI_API_KEY"):
-            print("LLM backend: openai")
-            data = _call_openai(redacted_transcript, schema_json, redaction_tags)
-        else:
-            print("LLM backend: fallback (no keys found)")
-            return _fallback_result(redacted_transcript, redaction_tags)
+        print("[llm] Calling Groq API...")
+        groq_start = time.time()
+        data = _call_groq(redacted_transcript, schema_json, redaction_tags)
+        groq_time = time.time() - groq_start
+        print(f"[llm] Groq API response: {groq_time:.2f}s")
     except Exception as e:
-        print("LLM_CALL_FAILED:", repr(e))
-        return _fallback_result(redacted_transcript, redaction_tags)
+        error_time = time.time() - start_time
+        print(f"[llm] Groq API failed after {error_time:.2f}s: {repr(e)}")
+        result = _fallback_result(redacted_transcript, redaction_tags)
+        return result, redaction_tags
 
     # 3) Post-process safety & ops routing
+    post_start = time.time()
+    sym = _has_symptoms(redacted_transcript)
     risk_level = data.get("risk_level", "low")
-    data["safe_patient_reply"] = sanitize_safe_reply(data.get("safe_patient_reply", ""), risk_level)
+    data["safe_patient_reply"] = sanitize_safe_reply(
+        data.get("safe_patient_reply", ""),
+        risk_level,
+        sym,
+    )
     data = normalize_task_and_routing(data, redacted_transcript)
 
-    # Add a redaction tag to task tags (no PHI, just metadata)
-    try:
-        if redaction_tags:
-            tags = data.setdefault("pharmacist_task", {}).setdefault("tags", [])
-            if "redacted" not in tags:
-                tags.append("redacted")
-    except Exception:
-        pass
+    # Normalize common Spanish medication spellings for demo consistency
+    meds = data.get("medications") or []
+    if meds:
+        tl = (redacted_transcript or "").lower()
+        if "metformina" in tl or "metamorfina" in tl:
+            for med in meds:
+                name = (med.get("name") or "").lower().strip()
+                if name in {"meth", "metamorfina", "metformin", "metformine", "metformina"}:
+                    med["name"] = "metformina"
 
-    return data
+    # Add redaction tag to task tags (no PHI, just metadata)
+    if redaction_tags:
+        tags = data.setdefault("pharmacist_task", {}).setdefault("tags", [])
+        if "redacted" not in tags:
+            tags.append("redacted")
 
-async def analyze_transcript(transcript: str, schema_json: Dict[str, Any]) -> Dict[str, Any]:
-    # Run sync calls in a threadpool to avoid blocking FastAPI event loop
+    post_time = time.time() - post_start
+    print(f"[llm] Post-processing: {post_time:.2f}s")
+    
+    total_time = time.time() - start_time
+    print(f"[llm] Total analysis time: {total_time:.2f}s")
+    
+    return data, redaction_tags
+
+
+async def analyze_transcript(transcript: str, schema_json: Dict[str, Any]) -> Tuple[Dict[str, Any], list[str]]:
     return await run_in_threadpool(_analyze_sync, transcript, schema_json)

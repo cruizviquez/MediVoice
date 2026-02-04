@@ -198,11 +198,42 @@
       border-left: 4px solid #28a745;
     }
 
-    .result-content.error {
-      border-left: 4px solid #dc3545;
-      background: #fff5f5;
-    }
 
+     .result-content.error {
+       border-left: 4px solid #dc3545;
+       background: #fff5f5;
+     }
+
+     .redaction-notice {
+       background: #e8f4f8;
+       border-left: 4px solid #17a2b8;
+       padding: 12px;
+       margin-bottom: 16px;
+       border-radius: 4px;
+       font-size: 12px;
+       color: #0c5460;
+     }
+
+     .redaction-notice strong {
+       display: block;
+       margin-bottom: 6px;
+     }
+
+     .redaction-tags {
+       display: flex;
+       flex-wrap: wrap;
+       gap: 6px;
+       margin-top: 8px;
+     }
+
+     .redaction-tag {
+       background: #d4edda;
+       color: #155724;
+       padding: 4px 10px;
+       border-radius: 12px;
+       font-size: 11px;
+       font-weight: 500;
+     }
     .waves {
       display: none;
       justify-content: center;
@@ -231,6 +262,120 @@
     @keyframes wave {
       0%, 100% { height: 20px; }
       50% { height: 40px; }
+    }
+
+    .audio-level {
+      display: none;
+      justify-content: center;
+      align-items: center;
+      gap: 3px;
+      margin-top: 16px;
+    }
+
+    .audio-level.show {
+      display: flex;
+    }
+
+    .level-bar {
+      width: 3px;
+      height: 8px;
+      background: #28a745;
+      border-radius: 1px;
+      transition: height 0.05s ease;
+    }
+
+    .recording-timer {
+      font-size: 18px;
+      font-weight: bold;
+      color: #dc3545;
+      margin-top: 12px;
+      display: none;
+      min-height: 24px;
+    }
+
+    .recording-timer.show {
+      display: block;
+    }
+
+    .examples-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: #f0f4ff;
+      border-radius: 12px;
+      text-align: left;
+    }
+
+    .examples-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 12px;
+    }
+
+    .example-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .example-btn {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: #333;
+      font-weight: 500;
+    }
+
+    .example-btn:hover {
+      background: #e3f2fd;
+      border-color: #0066cc;
+    }
+
+    .example-btn:active {
+      transform: scale(0.98);
+    }
+
+    .history-section {
+      margin-top: 30px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 12px;
+      text-align: left;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+
+    .history-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 12px;
+    }
+
+    .history-item {
+      background: white;
+      border-left: 3px solid #0066cc;
+      padding: 10px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .history-item:hover {
+      background: #e3f2fd;
+      transform: translateX(4px);
+    }
+
+    .history-time {
+      font-size: 11px;
+      color: #999;
+      margin-top: 4px;
     }
 
     @media (max-width: 600px) {
@@ -263,15 +408,25 @@
         </svg>
       </div>
       <h1>MediVoice Assistant</h1>
-      <p class="subtitle">Asistente virtual de triaje farmacéutico</p>
+      <p class="subtitle">Virtual Pharmacist Triage Assistant</p>
     </div>
 
     <div class="disclaimer">
-      <strong>⚠️ Aviso importante:</strong> Esta es una herramienta de demostración para triaje farmacéutico. No proporciona consejo médico.
+      <strong>⚠️ Important Notice:</strong> This is a demonstration tool for pharmacist triage. It does not provide medical advice.
+    </div>
+
+    <div class="examples-section">
+      <div class="examples-title">📝 Try with pre-recorded examples:</div>
+      <div class="example-buttons">
+        <button class="example-btn" onclick="sendExample('I stopped taking metformin because it makes me dizzy')">Dizziness & Metformin</button>
+        <button class="example-btn" onclick="sendExample('I have chest pain and shortness of breath for 2 days')">🚨 Chest Pain</button>
+        <button class="example-btn" onclick="sendExample('I ran out of lisinopril last week, should I reorder or just wait')">Adherence Question</button>
+        <button class="example-btn" onclick="sendExample('New rash appeared after starting the antibiotic yesterday')">Rash/Side Effect</button>
+      </div>
     </div>
 
     <div class="mic-section">
-      <div id="status" class="status-text">Mantén presionado el micrófono para hablar</div>
+      <div id="status" class="status-text">Click the microphone to start recording</div>
       
       <button id="micButton" class="mic-button">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -288,19 +443,36 @@
         <div class="wave"></div>
       </div>
 
+      <div id="audioLevel" class="audio-level">
+        <div class="level-bar" style="height: 8px;"></div>
+        <div class="level-bar" style="height: 12px;"></div>
+        <div class="level-bar" style="height: 15px;"></div>
+        <div class="level-bar" style="height: 12px;"></div>
+        <div class="level-bar" style="height: 8px;"></div>
+      </div>
+
+      <div id="recordingTimer" class="recording-timer">⏱️ 0:00</div>
+
       <p class="instruction">
-        💡 Ejemplo: "Dejé de tomar metformina porque me causa mareos"
+        💡 Example: "I stopped taking metformin because it makes me dizzy"
       </p>
     </div>
 
-    <div class="result-section">
-      <div class="result-title">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#0066cc" xmlns="http://www.w3.org/2000/svg">
-          <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm0 4c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm6 12H6v-1.4c0-2 4-3.1 6-3.1s6 1.1 6 3.1V19z"/>
-        </svg>
-        Resultado del análisis
-      </div>
-      <div id="result" class="result-content"></div>
+
+ <div class="result-section">
+   <div class="result-title">
+     <svg width="20" height="20" viewBox="0 0 24 24" fill="#0066cc" xmlns="http://www.w3.org/2000/svg">
+       <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm0 4c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm6 12H6v-1.4c0-2 4-3.1 6-3.1s6 1.1 6 3.1V19z"/>
+     </svg>
+     Analysis Result
+   </div>
+   <div id="redactionNotice" class="redaction-notice" style="display: none;"></div>
+   <div id="result" class="result-content"></div>
+ </div>
+    <div id="historySection" class="history-section" style="display: none;">
+      <div class="history-title">📋 Session History</div>
+      <div id="historyList"></div>
+      <button onclick="clearHistory()" style="margin-top: 12px; padding: 8px 12px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">Clear History</button>
     </div>
   </div>
 
@@ -308,36 +480,225 @@
   let mediaRecorder;
   let chunks = [];
   let audioStream = null;
+  let analyser = null;
+  let animationId = null;
+  let recordingStartTime = null;
+  let timerInterval = null;
+  let peakAudioLevel = 0;
+  let isRecording = false;
+  let streamTimeoutId = null;
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const MIN_RECORDING_TIME_MS = 1500; // Minimum 1.5 seconds
+  const MIN_AUDIO_LEVEL = 8; // Minimum average audio level (0-255 scale)
+  const MIN_FILE_SIZE = 5000; // Minimum 5KB
 
   const micButton = document.getElementById('micButton');
   const status = document.getElementById('status');
   const result = document.getElementById('result');
   const waves = document.getElementById('waves');
+  const audioLevel = document.getElementById('audioLevel');
+  const recordingTimer = document.getElementById('recordingTimer');
+  const historySection = document.getElementById('historySection');
+  const historyList = document.getElementById('historyList');
 
   function updateStatus(text, state = '') {
     status.textContent = text;
     status.className = 'status-text ' + state;
   }
 
-  function showResult(data, isError = false) {
-    result.className = 'result-content show ' + (isError ? 'error' : 'success');
-    result.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+
+ function showResult(data, isError = false, options = {}) {
+   const { stream = true } = options;
+   result.className = 'result-content show ' + (isError ? 'error' : 'success');
+   
+   // Show redaction notice if PHI was removed
+   const redactionNotice = document.getElementById('redactionNotice');
+   if (!isError && data && data.redaction_tags && data.redaction_tags.length > 0) {
+     redactionNotice.style.display = 'block';
+     redactionNotice.innerHTML = `
+       <strong>🔒 Data Privacy Notice:</strong>
+       Sensitive information has been redacted:
+       <div class="redaction-tags">
+         ${data.redaction_tags.map(tag => `<span class="redaction-tag">${tag}</span>`).join('')}
+       </div>
+     `;
+   } else {
+     redactionNotice.style.display = 'none';
+   }
+   
+   if (typeof data === 'string' || isError || !stream) {
+     result.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+     return;
+   }
+   
+   // Stream-like effect: show result with slight animation
+   streamResultToUI(data);
+ }
+  function streamResultToUI(data) {
+    if (typeof data === 'string') return;
+    
+    if (streamTimeoutId) {
+      clearTimeout(streamTimeoutId);
+      streamTimeoutId = null;
+    }
+    
+    // Clear and rebuild with streaming effect
+    result.textContent = '';
+    const json = JSON.stringify(data, null, 2);
+    let idx = 0;
+    
+    const streamChar = () => {
+      if (idx < json.length) {
+        result.textContent += json[idx];
+        idx++;
+        streamTimeoutId = setTimeout(streamChar, 5);
+      } else {
+        streamTimeoutId = null;
+      }
+    };
+    streamChar();
   }
 
   function hideResult() {
     result.className = 'result-content';
   }
 
+  function startAudioLevelMonitoring() {
+    if (!analyser) return;
+    
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    const levelbars = audioLevel.querySelectorAll('.level-bar');
+    peakAudioLevel = 0;
+    
+    const updateLevels = () => {
+      analyser.getByteFrequencyData(dataArray);
+      const avg = dataArray.reduce((a, b) => a + b) / dataArray.length;
+      const normalized = Math.min(40, (avg / 255) * 40);
+      
+      // Track peak level during recording (keep on 0-255 scale)
+      peakAudioLevel = Math.max(peakAudioLevel, avg);
+      
+      levelbars.forEach((bar, i) => {
+        const offset = ((i - 2) * 5);
+        const height = Math.max(4, normalized + offset);
+        bar.style.height = height + 'px';
+      });
+      
+      animationId = requestAnimationFrame(updateLevels);
+    };
+    updateLevels();
+  }
+
+  function stopAudioLevelMonitoring() {
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+  }
+
+  function startRecordingTimer() {
+    recordingStartTime = Date.now();
+    recordingTimer.classList.add('show');
+    
+    timerInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+      const mins = Math.floor(elapsed / 60);
+      const secs = elapsed % 60;
+      recordingTimer.textContent = `⏱️ ${mins}:${secs.toString().padStart(2, '0')}`;
+    }, 100);
+  }
+
+  function stopRecordingTimer() {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+    recordingTimer.classList.remove('show');
+  }
+
+
+ async function loadHistory() {
+   historyList.innerHTML = '';
+   try {
+     const res = await fetch('/history');
+     const data = await res.json();
+     const history = (data && data.items) ? data.items : [];
+     
+     if (!res.ok || history.length === 0) {
+       historySection.style.display = 'none';
+       return;
+     }
+     
+     historySection.style.display = 'block';
+     history.slice(0, 10).forEach(item => {
+       const div = document.createElement('div');
+       div.className = 'history-item';
+       const shortTranscript = item.transcript.substring(0, 50) + (item.transcript.length > 50 ? '...' : '');
+       const time = item.created_at ? new Date(item.created_at).toLocaleTimeString() : '';
+       div.innerHTML = `
+         <div><strong>${item.intent || 'Intake'}</strong></div>
+         <div>${shortTranscript}</div>
+         <div class="history-time">${time}</div>
+       `;
+       div.onclick = async () => {
+         updateStatus('✅ Loaded from history');
+         await loadHistoryEntry(item.id);
+       };
+       historyList.appendChild(div);
+     });
+   } catch (error) {
+     historySection.style.display = 'none';
+   }
+ }
+
+ async function loadHistoryEntry(entryId) {
+   try {
+     const res = await fetch(`/history/${entryId}`);
+     const data = await res.json();
+     if (!res.ok) {
+       throw new Error(data.detail || `HTTP error! status: ${res.status}`);
+     }
+    showResult(data, false, { stream: false });
+   } catch (error) {
+     showResult(`Error loading history: ${error.message}`, true);
+   }
+ }
+
+ function addToHistory() {
+   loadHistory();
+ }
+
+ async function clearHistory() {
+   if (confirm('Really clear all history?')) {
+     try {
+       await fetch('/history', { method: 'DELETE' });
+     } catch (error) {
+       console.error('Error clearing history:', error);
+     }
+     loadHistory();
+     updateStatus('History cleared');
+     setTimeout(() => {
+       updateStatus('Click the microphone to start recording');
+     }, 2000);
+   }
+ }
+
   async function startRecording() {
     try {
       chunks = [];
       hideResult();
-      updateStatus('🎙️ Escuchando... Suelta para procesar', 'recording');
+      updateStatus('🎙️ Recording... Click to stop', 'recording');
       
       micButton.classList.add('recording');
       waves.classList.add('show');
+      audioLevel.classList.add('show');
+      isRecording = true;
 
       audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const source = audioContext.createMediaStreamSource(audioStream);
+      analyser = audioContext.createAnalyser();
+      source.connect(analyser);
+
       mediaRecorder = new MediaRecorder(audioStream, { mimeType: 'audio/webm' });
 
       mediaRecorder.ondataavailable = (e) => {
@@ -345,10 +706,11 @@
       };
 
       mediaRecorder.onstop = async () => {
+        stopAudioLevelMonitoring();
+        stopRecordingTimer();
         const blob = new Blob(chunks, { type: 'audio/webm' });
         await sendAudio(blob);
         
-        // Stop all tracks
         if (audioStream) {
           audioStream.getTracks().forEach(track => track.stop());
           audioStream = null;
@@ -356,27 +718,75 @@
       };
 
       mediaRecorder.start();
+      startAudioLevelMonitoring();
+      startRecordingTimer();
     } catch (error) {
       console.error('Error starting recording:', error);
-      updateStatus('❌ Error al acceder al micrófono');
+      updateStatus('❌ Error accessing microphone');
       micButton.classList.remove('recording');
       waves.classList.remove('show');
-      showResult('Error: No se pudo acceder al micrófono. Verifica los permisos.', true);
+      audioLevel.classList.remove('show');
+      isRecording = false;
+      showResult('Error: Could not access microphone. Check permissions.', true);
     }
   }
 
-  function stopRecording() {
+  function stopRecordingAndAnalyze() {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
-      updateStatus('⏳ Procesando tu mensaje...', 'processing');
+      updateStatus('⏳ Analyzing audio...', 'processing');
       micButton.classList.remove('recording');
       micButton.classList.add('processing');
       waves.classList.remove('show');
+      audioLevel.classList.remove('show');
+      isRecording = false;
       mediaRecorder.stop();
+    }
+  }
+
+  async function handleMicButtonClick() {
+    if (!isRecording) {
+      await startRecording();
+    } else {
+      stopRecordingAndAnalyze();
     }
   }
 
   async function sendAudio(blob) {
     try {
+      // Validation: Check file size
+      if (blob.size < MIN_FILE_SIZE) {
+        micButton.classList.remove('processing');
+        updateStatus('❌ Recording too quiet or too short');
+        showResult(
+          `Error: Recording appears to be empty or too quiet.\n\nSuggestions:\n` +
+          `• Check microphone permissions\n` +
+          `• Record for at least 2 seconds\n` +
+          `• Speak clearly into the microphone\n` +
+          `• Ensure volume is not muted\n\n` +
+          `Current: ${blob.size} bytes (need > 5000)`,
+          true
+        );
+        resetUI();
+        return;
+      }
+
+      // Validation: Check if peak audio level is too low
+      if (peakAudioLevel < MIN_AUDIO_LEVEL) {
+        micButton.classList.remove('processing');
+        updateStatus('❌ No sound detected');
+        showResult(
+          `Error: Microphone didn't pick up clear audio.\n\n` +
+          `• Check if microphone is working\n` +
+          `• Grant browser permission to use microphone\n` +
+          `• Speak louder or closer to mic\n` +
+          `• Try using a different microphone\n\n` +
+          `Tip: Watch the green bars on the left when recording.`,
+          true
+        );
+        resetUI();
+        return;
+      }
+
       const form = new FormData();
       form.append('audio', blob, 'recording.webm');
 
@@ -385,67 +795,84 @@
         body: form 
       });
 
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
       const data = await res.json();
       
       micButton.classList.remove('processing');
-      updateStatus('✅ Análisis completado - Listo para grabar de nuevo');
-      showResult(data, false);
       
-      // Reset button after showing result
-      setTimeout(() => {
-        updateStatus('Mantén presionado el micrófono para hablar');
-      }, 3000);
+      if (!res.ok) {
+        throw new Error(data.detail || `HTTP error! status: ${res.status}`);
+      }
+
+      updateStatus('✅ Analysis complete - Ready to record again');
+      showResult(data, false);
+      addToHistory();
+      resetUI();
 
     } catch (error) {
       console.error('Error sending audio:', error);
       micButton.classList.remove('processing');
-      updateStatus('❌ Error en el análisis - Intenta de nuevo');
-      showResult(`Error: ${error.message}\n\nVerifica que el servidor esté en ejecución.`, true);
-      
-      setTimeout(() => {
-        updateStatus('Mantén presionado el micrófono para hablar');
-      }, 3000);
+      updateStatus('❌ Analysis error - Try again');
+      showResult(`Error: ${error.message}\n\nPlease verify the server is running.`, true);
+      resetUI();
     }
   }
 
-  // Mouse events
-  micButton.addEventListener('mousedown', (e) => {
-    e.preventDefault();
-    startRecording();
-  });
+  function resetUI() {
+    setTimeout(() => {
+      updateStatus('Click the microphone to start recording');
+      peakAudioLevel = 0;
+    }, 3000);
+  }
 
-  micButton.addEventListener('mouseup', (e) => {
-    e.preventDefault();
-    stopRecording();
-  });
+  async function sendExample(transcript) {
+    updateStatus('⏳ Processing example...', 'processing');
+    micButton.classList.add('processing');
+    hideResult();
 
-  micButton.addEventListener('mouseleave', (e) => {
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-      stopRecording();
+    try {
+      const res = await fetch('/voice-intake-example', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript })
+      });
+
+      const data = await res.json();
+      
+      micButton.classList.remove('processing');
+      
+      if (!res.ok) {
+        throw new Error(data.detail || `HTTP error! status: ${res.status}`);
+      }
+
+      updateStatus('✅ Analysis complete - Ready to record again');
+      showResult(data, false);
+      addToHistory();
+      resetUI();
+
+    } catch (error) {
+      console.error('Error:', error);
+      micButton.classList.remove('processing');
+      updateStatus('❌ Error');
+      showResult(`Error: ${error.message}`, true);
+      resetUI();
     }
-  });
+  }
 
-  // Touch events for mobile
+  // Click to toggle recording on/off
+  micButton.addEventListener('click', handleMicButtonClick);
+
+  // Touch support for mobile
   micButton.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    startRecording();
   });
 
   micButton.addEventListener('touchend', (e) => {
     e.preventDefault();
-    stopRecording();
+    handleMicButtonClick();
   });
 
-  micButton.addEventListener('touchcancel', (e) => {
-    e.preventDefault();
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-      stopRecording();
-    }
-  });
+  // Load history on page load
+  loadHistory();
 </script>
 </body>
 </html>
