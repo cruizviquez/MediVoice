@@ -1,0 +1,40 @@
+{
+  "transcript": "I stopped taking matte-forming because it makes me D.C.",
+  "language": "en",
+  "result": {
+    "intent": "side_effects",
+    "risk_level": "medium",
+    "key_facts": [],
+    "medications": [
+      {
+        "name": "matte-forming",
+        "issue": "makes me D.C."
+      }
+    ],
+    "recommended_next_step": "Pharmacist outreach within 24 hours to address side-effect concern and adherence barrier.",
+    "safe_patient_reply": "Please wait for the pharmacist's follow-up phone call. They will discuss your concerns and provide further guidance.",
+    "soap_note": {
+      "subjective": "Patient stopped taking matte-forming due to side effect.",
+      "objective": "Not available (voice-only intake).",
+      "assessment": "Patient is experiencing a side effect due to medication.",
+      "plan": "Follow-up with pharmacist for further assessment."
+    },
+    "pharmacist_task": {
+      "queue": "side_effect_followup",
+      "priority": "high",
+      "due_in_hours": 24,
+      "summary": "Patient stopped taking matte-forming due to side effect, require follow-up.",
+      "tags": [
+        "side_effects",
+        "adherence"
+      ]
+    },
+    "safety": {
+      "red_flag_detected": false,
+      "red_flag_signals": [],
+      "advice_violation": false
+    }
+  },
+  "redaction_tags": [],
+  "created_at": "2026-02-10T20:17:53.543644+00:00"
+}
