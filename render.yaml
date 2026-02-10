@@ -8,7 +8,6 @@ services:
     envVars:
       - key: GROQ_API_KEY
         value: ""
-        sync: false
       - key: WHISPER_MODEL
         value: base
       - key: WHISPER_DEVICE
