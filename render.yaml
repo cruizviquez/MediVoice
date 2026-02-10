@@ -2,17 +2,32 @@ services:
   - type: web
     name: medivoice
     env: python
+    plan: free
     autoDeploy: true
-    buildCommand: apt-get update && apt-get install -y ffmpeg && pip install -r requirements.txt
+
+    pythonVersion: 3.11
+
+    buildCommand: |
+      export DEBIAN_FRONTEND=noninteractive
+      apt-get update
+      apt-get install -y ffmpeg libgl1
+      pip install --upgrade pip
+      pip install -r requirements.txt
+
     startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+
     envVars:
       - key: GROQ_API_KEY
-        value: "REPLACE_ME"
+        sync: false
+
       - key: WHISPER_MODEL
         value: base
+
       - key: WHISPER_DEVICE
         value: cpu
+
       - key: WHISPER_COMPUTE_TYPE
         value: int8
+
       - key: PYTHONUNBUFFERED
         value: "1"
