@@ -9,7 +9,7 @@ groq
 python-dotenv
 
 # Optional (pick ONE for local STT):
-faster-whisper>=1.0.3
+faster-whisper>=1.1.0
 #openai-whisper>=20231117
 
 # Optional (for audio conversion if you want broader browser support):

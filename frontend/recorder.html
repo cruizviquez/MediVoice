@@ -477,8 +477,8 @@
   let streamTimeoutId = null;
   const audioContext = new (window.AudioContext || window.webkitAudioContext)();
   const MIN_RECORDING_TIME_MS = 1500; // Minimum 1.5 seconds
-  const MIN_AUDIO_LEVEL = 8; // Minimum average audio level (0-255 scale)
-  const MIN_FILE_SIZE = 5000; // Minimum 5KB
+  const MIN_AUDIO_LEVEL = 2; // Minimum average audio level (0-255 scale)
+  const MIN_FILE_SIZE = 2000; // Minimum 2KB
 
   const micButton = document.getElementById('micButton');
   const status = document.getElementById('status');
