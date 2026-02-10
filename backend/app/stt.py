@@ -19,6 +19,7 @@ _WHISPER_MODEL_CACHE = None
 
 def _get_faster_whisper_model():
     global _WHISPER_MODEL_CACHE
+    from faster_whisper import WhisperModel  # type: ignore
     if _WHISPER_MODEL_CACHE is None:
         print("[stt] Loading faster-whisper model...")
         model_start = time.time()
@@ -50,8 +51,6 @@ async def transcribe_file(filepath: str) -> Tuple[str, Optional[str]]:
 
     # Try faster-whisper first
     try:
-        from faster_whisper import WhisperModel  # type: ignore
-
         model = _get_faster_whisper_model()
         
         transcribe_start = time.time()
