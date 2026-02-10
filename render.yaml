@@ -3,7 +3,7 @@ services:
     name: medivoice
     env: python
     autoDeploy: true
-    buildCommand: pip install -r requirements.txt
+    buildCommand: apt-get update && apt-get install -y ffmpeg && pip install -r requirements.txt
     startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: GROQ_API_KEY
@@ -16,5 +16,3 @@ services:
         value: int8
       - key: PYTHONUNBUFFERED
         value: "1"
-    aptPackages:
-      - ffmpeg
