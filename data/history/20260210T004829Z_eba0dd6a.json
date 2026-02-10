@@ -1,23 +1,23 @@
 {
-  "transcript": "Hi, I just stopped taking metformin because it makes me dizzy",
+  "transcript": "Hi, this is Carlos. I stopped taking med for me because it makes me dizzy",
   "language": "en",
   "result": {
     "intent": "side_effects",
     "risk_level": "medium",
     "key_facts": [
-      "Patient stopped taking metformin due to dizziness"
+      "Patient stopped taking medication due to dizziness"
     ],
     "medications": [
       {
-        "name": "metformin",
+        "name": "med for me",
         "issue": "dizziness"
       }
     ],
     "recommended_next_step": "Pharmacist outreach within 24 hours to address side-effect concern and adherence barrier.",
-    "safe_patient_reply": "Thank you for sharing this information. We will follow up with our pharmacist shortly. If symptoms worsen or you feel unsafe, please seek urgent care.",
+    "safe_patient_reply": "Thank you for sharing this information with us. A pharmacist will contact you soon to discuss your medication concerns. If symptoms worsen or you feel unsafe, please seek urgent care.",
     "soap_note": {
-      "subjective": "Patient stopped metformin due to dizziness",
-      "objective": "Not available (voice-only intake)",
+      "subjective": "Patient stopped taking medication due to dizziness",
+      "objective": "",
       "assessment": "Pending pharmacist review.",
       "plan": "Pharmacist to review transcript and follow up with patient."
     },
@@ -25,11 +25,13 @@
       "queue": "side_effect_followup",
       "priority": "high",
       "due_in_hours": 24,
-      "summary": "Patient report of metformin side effect (dizziness)",
+      "summary": "Discuss medication concerns with patient due to side effect.",
       "tags": [
-        "medication_side_effects",
+        "REDACTED_NAME",
+        "dizziness",
         "side_effects",
-        "adherence"
+        "adherence",
+        "redacted"
       ]
     },
     "safety": {
@@ -38,6 +40,8 @@
       "advice_violation": false
     }
   },
-  "redaction_tags": [],
-  "created_at": "2026-02-04T19:07:09.202926+00:00"
+  "redaction_tags": [
+    "REDACTED_NAME"
+  ],
+  "created_at": "2026-02-10T00:48:29.856428+00:00"
 }

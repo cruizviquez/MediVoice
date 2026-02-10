@@ -1,0 +1,41 @@
+{
+  "transcript": "Hi, this is Carlos and I have a chest pain",
+  "language": "en",
+  "result": {
+    "intent": "general_question",
+    "risk_level": "high",
+    "key_facts": [
+      "chest pain reported"
+    ],
+    "medications": [],
+    "recommended_next_step": "Please see a doctor or visit urgent care/emergency services for immediate assessment.",
+    "safe_patient_reply": "I'm going to transfer you to a pharmacist to help with this situation. Please remain on the line. If you feel unsafe or have severe symptoms, please seek urgent care or call emergency services.",
+    "soap_note": {
+      "subjective": "[REDACTED_NAME] reported chest pain",
+      "objective": "Not available (voice-only intake)",
+      "assessment": "Patient reports chest pain",
+      "plan": "Urgent care/emergency services follow-up"
+    },
+    "pharmacist_task": {
+      "queue": "urgent_escalation",
+      "priority": "urgent",
+      "due_in_hours": 1,
+      "summary": "[REDACTED_NAME] reports chest pain",
+      "tags": [
+        "red_flag",
+        "redacted"
+      ]
+    },
+    "safety": {
+      "red_flag_detected": true,
+      "red_flag_signals": [
+        "chest pain"
+      ],
+      "advice_violation": false
+    }
+  },
+  "redaction_tags": [
+    "REDACTED_NAME"
+  ],
+  "created_at": "2026-02-10T01:02:34.053823+00:00"
+}

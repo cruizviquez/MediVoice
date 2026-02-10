@@ -1,0 +1,42 @@
+{
+  "transcript": "I ran out of lisinopril last week, should I reorder or just wait",
+  "language": "en",
+  "result": {
+    "intent": "refill_request",
+    "risk_level": "low",
+    "key_facts": [
+      "Patient ran out of Lisinopril last week"
+    ],
+    "medications": [
+      {
+        "name": "Lisinopril",
+        "issue": "Ran out of medication"
+      }
+    ],
+    "recommended_next_step": "Pharmacist review for refill authorization",
+    "safe_patient_reply": "Please follow up with your pharmacy or our office to discuss next steps.",
+    "soap_note": {
+      "subjective": "Patient asked about Lisinopril refill",
+      "objective": "Not available (voice-only intake)",
+      "assessment": "Patient needs to discuss Lisinopril refill with pharmacist",
+      "plan": "Pharmacist review and authorization"
+    },
+    "pharmacist_task": {
+      "queue": "mtm_outreach",
+      "priority": "normal",
+      "due_in_hours": 24,
+      "summary": "Review Lisinopril refill request",
+      "tags": [
+        "refill_request",
+        "mtm_outreach"
+      ]
+    },
+    "safety": {
+      "red_flag_detected": false,
+      "red_flag_signals": [],
+      "advice_violation": false
+    }
+  },
+  "redaction_tags": [],
+  "created_at": "2026-02-10T01:08:48.249543+00:00"
+}

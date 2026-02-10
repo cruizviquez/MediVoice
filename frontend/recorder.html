@@ -66,6 +66,32 @@
       line-height: 1.5;
     }
 
+    .nav-actions {
+      margin-top: 14px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .nav-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      text-decoration: none;
+      background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 6px 16px rgba(0, 102, 204, 0.3);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .nav-link:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 20px rgba(0, 102, 204, 0.35);
+    }
+
     .disclaimer {
       background: #fff3cd;
       border-left: 4px solid #ffc107;
@@ -175,6 +201,7 @@
       gap: 8px;
     }
 
+
     .result-content {
       background: #f8f9fa;
       border: 1px solid #e0e0e0;
@@ -234,6 +261,7 @@
        font-size: 11px;
        font-weight: 500;
      }
+
     .waves {
       display: none;
       justify-content: center;
@@ -339,44 +367,6 @@
       transform: scale(0.98);
     }
 
-    .history-section {
-      margin-top: 30px;
-      padding: 20px;
-      background: #f8f9fa;
-      border-radius: 12px;
-      text-align: left;
-      max-height: 250px;
-      overflow-y: auto;
-    }
-
-    .history-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #1a1a1a;
-      margin-bottom: 12px;
-    }
-
-    .history-item {
-      background: white;
-      border-left: 3px solid #0066cc;
-      padding: 10px;
-      margin-bottom: 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .history-item:hover {
-      background: #e3f2fd;
-      transform: translateX(4px);
-    }
-
-    .history-time {
-      font-size: 11px;
-      color: #999;
-      margin-top: 4px;
-    }
 
     @media (max-width: 600px) {
       .container {
@@ -409,6 +399,9 @@
       </div>
       <h1>MediVoice Assistant</h1>
       <p class="subtitle">Virtual Pharmacist Triage Assistant</p>
+      <div class="nav-actions">
+        <a class="nav-link" href="/dashboard">Dashboard</a>
+      </div>
     </div>
 
     <div class="disclaimer">
@@ -469,11 +462,6 @@
    <div id="redactionNotice" class="redaction-notice" style="display: none;"></div>
    <div id="result" class="result-content"></div>
  </div>
-    <div id="historySection" class="history-section" style="display: none;">
-      <div class="history-title">📋 Session History</div>
-      <div id="historyList"></div>
-      <button onclick="clearHistory()" style="margin-top: 12px; padding: 8px 12px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">Clear History</button>
-    </div>
   </div>
 
 <script>
@@ -498,8 +486,6 @@
   const waves = document.getElementById('waves');
   const audioLevel = document.getElementById('audioLevel');
   const recordingTimer = document.getElementById('recordingTimer');
-  const historySection = document.getElementById('historySection');
-  const historyList = document.getElementById('historyList');
 
   function updateStatus(text, state = '') {
     status.textContent = text;
@@ -511,8 +497,7 @@
    const { stream = true } = options;
    result.className = 'result-content show ' + (isError ? 'error' : 'success');
    
-   // Show redaction notice if PHI was removed
-   const redactionNotice = document.getElementById('redactionNotice');
+  // Show redaction notice if PHI was removed
    if (!isError && data && data.redaction_tags && data.redaction_tags.length > 0) {
      redactionNotice.style.display = 'block';
      redactionNotice.innerHTML = `
@@ -559,8 +544,17 @@
     streamChar();
   }
 
+  const redactionNotice = document.getElementById('redactionNotice');
+
   function hideResult() {
     result.className = 'result-content';
+  }
+
+  function resetRecorderUI() {
+    hideResult();
+    result.textContent = '';
+    updateStatus('Click the microphone to start recording');
+    redactionNotice.style.display = 'none';
   }
 
   function startAudioLevelMonitoring() {
@@ -617,71 +611,6 @@
   }
 
 
- async function loadHistory() {
-   historyList.innerHTML = '';
-   try {
-     const res = await fetch('/history');
-     const data = await res.json();
-     const history = (data && data.items) ? data.items : [];
-     
-     if (!res.ok || history.length === 0) {
-       historySection.style.display = 'none';
-       return;
-     }
-     
-     historySection.style.display = 'block';
-     history.slice(0, 10).forEach(item => {
-       const div = document.createElement('div');
-       div.className = 'history-item';
-       const shortTranscript = item.transcript.substring(0, 50) + (item.transcript.length > 50 ? '...' : '');
-       const time = item.created_at ? new Date(item.created_at).toLocaleTimeString() : '';
-       div.innerHTML = `
-         <div><strong>${item.intent || 'Intake'}</strong></div>
-         <div>${shortTranscript}</div>
-         <div class="history-time">${time}</div>
-       `;
-       div.onclick = async () => {
-         updateStatus('✅ Loaded from history');
-         await loadHistoryEntry(item.id);
-       };
-       historyList.appendChild(div);
-     });
-   } catch (error) {
-     historySection.style.display = 'none';
-   }
- }
-
- async function loadHistoryEntry(entryId) {
-   try {
-     const res = await fetch(`/history/${entryId}`);
-     const data = await res.json();
-     if (!res.ok) {
-       throw new Error(data.detail || `HTTP error! status: ${res.status}`);
-     }
-    showResult(data, false, { stream: false });
-   } catch (error) {
-     showResult(`Error loading history: ${error.message}`, true);
-   }
- }
-
- function addToHistory() {
-   loadHistory();
- }
-
- async function clearHistory() {
-   if (confirm('Really clear all history?')) {
-     try {
-       await fetch('/history', { method: 'DELETE' });
-     } catch (error) {
-       console.error('Error clearing history:', error);
-     }
-     loadHistory();
-     updateStatus('History cleared');
-     setTimeout(() => {
-       updateStatus('Click the microphone to start recording');
-     }, 2000);
-   }
- }
 
   async function startRecording() {
     try {
@@ -805,7 +734,6 @@
 
       updateStatus('✅ Analysis complete - Ready to record again');
       showResult(data, false);
-      addToHistory();
       resetUI();
 
     } catch (error) {
@@ -846,7 +774,6 @@
 
       updateStatus('✅ Analysis complete - Ready to record again');
       showResult(data, false);
-      addToHistory();
       resetUI();
 
     } catch (error) {
@@ -871,8 +798,27 @@
     handleMicButtonClick();
   });
 
-  // Load history on page load
-  loadHistory();
+  // Reset state on load and when returning to the tab
+  window.addEventListener('load', resetRecorderUI);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      resetRecorderUI();
+      if (audioStream) {
+        audioStream.getTracks().forEach(track => track.stop());
+        audioStream = null;
+      }
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        try { mediaRecorder.stop(); } catch (e) {}
+      }
+      micButton.classList.remove('recording', 'processing');
+      waves.classList.remove('show');
+      audioLevel.classList.remove('show');
+      stopAudioLevelMonitoring();
+      stopRecordingTimer();
+      isRecording = false;
+    }
+  });
+
 </script>
 </body>
 </html>

@@ -1,0 +1,45 @@
+{
+  "transcript": "Hi, this is Carlos. I stopped taking med for me because it makes me dizzy",
+  "language": "en",
+  "result": {
+    "intent": "medication_issue",
+    "risk_level": "medium",
+    "key_facts": [
+      "Patient reported stopped taking medication due to side effect"
+    ],
+    "medications": [
+      {
+        "name": "med for me",
+        "issue": "dizzy"
+      }
+    ],
+    "recommended_next_step": "Pharmacist outreach within 24 hours to address side-effect concern and adherence barrier.",
+    "safe_patient_reply": "We will discuss your concerns about dizziness with your medication at your next appointment. Your pharmacist may need to adjust your treatment plan. If symptoms worsen or you feel unsafe, please seek urgent care.",
+    "soap_note": {
+      "subjective": "Patient reports dizziness with current medication",
+      "objective": "",
+      "assessment": "Pending pharmacist review.",
+      "plan": "Pharmacist to review transcript and follow up with patient."
+    },
+    "pharmacist_task": {
+      "queue": "side_effect_followup",
+      "priority": "high",
+      "due_in_hours": 24,
+      "summary": "Review patient's medication regimen due to reported side effects",
+      "tags": [
+        "side_effects",
+        "adherence",
+        "redacted"
+      ]
+    },
+    "safety": {
+      "red_flag_detected": false,
+      "red_flag_signals": [],
+      "advice_violation": false
+    }
+  },
+  "redaction_tags": [
+    "REDACTED_NAME"
+  ],
+  "created_at": "2026-02-10T01:00:54.703473+00:00"
+}

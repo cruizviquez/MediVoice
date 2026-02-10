@@ -13,6 +13,27 @@ import time
 MIN_AUDIO_BYTES = 5_000
 
 
+WHISPER_MODEL_NAME = os.getenv("WHISPER_MODEL", "base")
+WHISPER_DEVICE = os.getenv("WHISPER_DEVICE", "cpu")
+WHISPER_COMPUTE_TYPE = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
+_WHISPER_MODEL_CACHE = None
+
+
+def _get_faster_whisper_model():
+    global _WHISPER_MODEL_CACHE
+    if _WHISPER_MODEL_CACHE is None:
+        print("[stt] Loading faster-whisper model...")
+        model_start = time.time()
+        _WHISPER_MODEL_CACHE = WhisperModel(
+            WHISPER_MODEL_NAME,
+            device=WHISPER_DEVICE,
+            compute_type=WHISPER_COMPUTE_TYPE,
+        )
+        model_time = time.time() - model_start
+        print(f"[stt] Model loaded: {model_time:.2f}s")
+    return _WHISPER_MODEL_CACHE
+
+
 async def transcribe_file(filepath: str) -> Tuple[str, Optional[str]]:
     """Return (transcript, language). Raises ValueError or RuntimeError on failure."""
     start_time = time.time()
@@ -32,11 +53,7 @@ async def transcribe_file(filepath: str) -> Tuple[str, Optional[str]]:
     try:
         from faster_whisper import WhisperModel  # type: ignore
 
-        print("[stt] Loading faster-whisper model...")
-        model_start = time.time()
-        model = WhisperModel("medium", device="cpu", compute_type="int8")
-        model_time = time.time() - model_start
-        print(f"[stt] Model loaded: {model_time:.2f}s")
+        model = _get_faster_whisper_model()
         
         transcribe_start = time.time()
         segments, info = model.transcribe(filepath, beam_size=5, vad_filter=True)

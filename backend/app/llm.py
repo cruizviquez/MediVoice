@@ -27,6 +27,7 @@ SYSTEM_PROMPT = (
     "Output rules:\n"
     "- Return ONLY JSON that matches the IntakeResult schema provided.\n"
     "- Do not wrap JSON in markdown.\n"
+    "- Do not invent redaction tags or placeholders. Keep medication names verbatim as provided.\n"
 )
 
 # Patterns that often create unsafe medical advice in a patient-facing reply
@@ -109,6 +110,7 @@ def _build_user_prompt(redacted_transcript: str, schema_json: Dict[str, Any], re
         "Convert the following patient transcript into an IntakeResult JSON object.\n"
         "Follow the schema strictly.\n"
         "Do not include medical advice. Do not instruct the patient to start/stop/change medications.\n\n"
+        "Do not invent redaction tags or placeholders; keep medication names verbatim.\n\n"
         f"{redaction_note}"
         f"Transcript:\n{redacted_transcript}\n\n"
         f"Schema:\n{json.dumps(schema_json)}\n\n"

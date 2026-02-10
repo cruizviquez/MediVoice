@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MediVoice Assistant — Pharmacist Dashboard</title>
+  <link rel="stylesheet" href="/static/dashboard.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="title">MediVoice Assistant</div>
+        <div class="subtitle">Pharmacist Dashboard</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <span class="pill" id="backendStatus">Backend: …</span>
+      <a class="btn" href="/demo">Recorder</a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Left: Queue -->
+    <section class="panel">
+      <div class="panelHeader">
+        <h2>History</h2>
+        <div class="panelHeaderRight">
+          <span class="pill" id="caseCount">0 cases</span>
+        </div>
+      </div>
+
+      <div class="queueList" id="queueList"></div>
+      <div class="hint">Tip: run a demo intake to populate history.</div>
+    </section>
+
+    <!-- Right: Case details + Upload -->
+    <section class="panel">
+      <div class="panelHeader">
+        <h2>Case Details</h2>
+      </div>
+
+      <div id="detailsEmpty" class="emptyState">
+        Select a case from the queue to view details.
+      </div>
+
+      <div id="details" class="details hidden">
+        <div class="metaRow">
+          <div class="badge ghost" id="badgeIntent">intent</div>
+          <div class="badge" id="badgeRisk">risk</div>
+          <div class="badge ghost" id="badgeStatus">status</div>
+        </div>
+
+        <div class="card">
+          <div class="cardTitle">Recommended Next Step</div>
+          <div class="cardBody" id="nextStep"></div>
+        </div>
+
+        <div class="card">
+          <div class="cardTitle">SOAP Note</div>
+          <div class="soapGrid">
+            <div>
+              <div class="soapLabel">S — Subjective</div>
+              <div class="soapText" id="soapS"></div>
+            </div>
+            <div>
+              <div class="soapLabel">O — Objective</div>
+              <div class="soapText" id="soapO"></div>
+            </div>
+            <div>
+              <div class="soapLabel">A — Assessment</div>
+              <div class="soapText" id="soapA"></div>
+            </div>
+            <div>
+              <div class="soapLabel">P — Plan</div>
+              <div class="soapText" id="soapP"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="cardTitle">Task</div>
+          <div class="cardBody" id="taskSummary"></div>
+          <div class="small" id="taskMeta"></div>
+          <div class="tagRow" id="taskTags"></div>
+        </div>
+
+        <div class="toolbar">
+          <button class="btn" id="btnResolve">Resolve</button>
+          <button class="btn" id="btnFollowup">Create Follow-up</button>
+          <button class="btnDanger" id="btnEscalate">Escalate</button>
+        </div>
+        <div class="small" id="actionMsg"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/dashboard.js"></script>
+</body>
+</html>

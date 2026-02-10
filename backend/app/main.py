@@ -1,4 +1,6 @@
 from __future__ import annotations
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse
@@ -21,6 +23,8 @@ class ExampleTranscriptPayload(BaseModel):
 
 
 app = FastAPI(title="MedVoice Intake Agent", version="0.1.0")
+
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
 # Relaxed CORS for demo/dev
 app.add_middleware(
@@ -111,6 +115,11 @@ def demo_page():
     demo_path = os.path.join(here, "..", "..", "frontend", "recorder.html")
     with open(demo_path, "r", encoding="utf-8") as f:
         return f.read()
+
+
+@app.get("/dashboard")
+def dashboard():
+    return FileResponse("frontend/dashboard.html")
 
 @app.post("/voice-intake", response_model=VoiceIntakeResponse)
 async def voice_intake(audio: UploadFile = File(...)):
