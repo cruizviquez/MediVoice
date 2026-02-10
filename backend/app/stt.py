@@ -76,6 +76,8 @@ async def transcribe_file(filepath: str) -> Tuple[str, Optional[str]]:
             return text, getattr(info, "language", None)
 
         print("[stt] faster-whisper returned empty transcript")
+            if last_error is None:
+                last_error = "faster-whisper: empty transcript"
     except Exception as exc:
         elapsed = time.time() - start_time
         print(f"[stt] faster-whisper failed after {elapsed:.2f}s: {exc!r}")
@@ -103,6 +105,8 @@ async def transcribe_file(filepath: str) -> Tuple[str, Optional[str]]:
             return text, result.get("language")
 
         print("[stt] openai-whisper returned empty transcript")
+            if last_error is None:
+                last_error = "openai-whisper: empty transcript"
     except Exception as exc:
         elapsed = time.time() - start_time
         print(f"[stt] openai-whisper failed after {elapsed:.2f}s: {exc!r}")
