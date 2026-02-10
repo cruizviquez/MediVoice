@@ -13,7 +13,7 @@ import time
 MIN_AUDIO_BYTES = 5_000
 
 
-WHISPER_MODEL_NAME = os.getenv("WHISPER_MODEL", "base")
+WHISPER_MODEL_NAME = os.getenv("WHISPER_MODEL", "small")
 WHISPER_DEVICE = os.getenv("WHISPER_DEVICE", "cpu")
 WHISPER_COMPUTE_TYPE = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
 _WHISPER_MODEL_CACHE = None
