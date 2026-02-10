@@ -5,8 +5,6 @@ services:
     plan: free
     autoDeploy: true
 
-    pythonVersion: 3.11
-
     buildCommand: |
       export DEBIAN_FRONTEND=noninteractive
       apt-get update
@@ -21,7 +19,7 @@ services:
         sync: false
 
       - key: WHISPER_MODEL
-        value: base
+        value: small
 
       - key: WHISPER_DEVICE
         value: cpu
