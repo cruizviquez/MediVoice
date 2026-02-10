@@ -37,6 +37,7 @@ def _get_faster_whisper_model():
 async def transcribe_file(filepath: str) -> Tuple[str, Optional[str]]:
     """Return (transcript, language). Raises ValueError or RuntimeError on failure."""
     start_time = time.time()
+    last_error: str | None = None
     try:
         file_size = os.path.getsize(filepath)
     except Exception:
@@ -78,6 +79,7 @@ async def transcribe_file(filepath: str) -> Tuple[str, Optional[str]]:
     except Exception as exc:
         elapsed = time.time() - start_time
         print(f"[stt] faster-whisper failed after {elapsed:.2f}s: {exc!r}")
+        last_error = f"faster-whisper: {exc!r}"
 
     # Try openai-whisper (open-source local package)
     try:
@@ -104,5 +106,7 @@ async def transcribe_file(filepath: str) -> Tuple[str, Optional[str]]:
     except Exception as exc:
         elapsed = time.time() - start_time
         print(f"[stt] openai-whisper failed after {elapsed:.2f}s: {exc!r}")
+        last_error = f"openai-whisper: {exc!r}"
 
-    raise RuntimeError("STT failed to transcribe audio. Check microphone input and audio format.")
+    detail = f" ({last_error})" if last_error else ""
+    raise RuntimeError("STT failed to transcribe audio. Check microphone input and audio format." + detail)
