@@ -4,10 +4,8 @@ from typing import Tuple, Optional
 import os
 import time
 
-# You can enable local STT by installing either:
+# You can enable local STT by installing:
 #   pip install faster-whisper
-# or
-#   pip install openai-whisper
 
 # Lowered to reduce false failures for short utterances in browser recordings.
 MIN_AUDIO_BYTES = 5_000
@@ -76,41 +74,12 @@ async def transcribe_file(filepath: str) -> Tuple[str, Optional[str]]:
             return text, getattr(info, "language", None)
 
         print("[stt] faster-whisper returned empty transcript")
-            if last_error is None:
-                last_error = "faster-whisper: empty transcript"
+        if last_error is None:
+            last_error = "faster-whisper: empty transcript"
     except Exception as exc:
         elapsed = time.time() - start_time
         print(f"[stt] faster-whisper failed after {elapsed:.2f}s: {exc!r}")
         last_error = f"faster-whisper: {exc!r}"
-
-    # Try openai-whisper (open-source local package)
-    try:
-        import whisper  # type: ignore
-
-        print("[stt] Loading openai-whisper model...")
-        model_start = time.time()
-        model = whisper.load_model("medium")
-        model_time = time.time() - model_start
-        print(f"[stt] Model loaded: {model_time:.2f}s")
-        
-        transcribe_start = time.time()
-        result = model.transcribe(filepath)
-        text = (result.get("text") or "").strip()
-        transcribe_time = time.time() - transcribe_start
-        print(f"[stt] Transcribed: {transcribe_time:.2f}s ({len(text)} chars)")
-
-        if text:
-            total_time = time.time() - start_time
-            print(f"[stt] openai-whisper complete: {total_time:.2f}s total")
-            return text, result.get("language")
-
-        print("[stt] openai-whisper returned empty transcript")
-            if last_error is None:
-                last_error = "openai-whisper: empty transcript"
-    except Exception as exc:
-        elapsed = time.time() - start_time
-        print(f"[stt] openai-whisper failed after {elapsed:.2f}s: {exc!r}")
-        last_error = f"openai-whisper: {exc!r}"
 
     detail = f" ({last_error})" if last_error else ""
     raise RuntimeError("STT failed to transcribe audio. Check microphone input and audio format." + detail)
