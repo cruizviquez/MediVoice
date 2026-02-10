@@ -262,6 +262,41 @@
        font-weight: 500;
      }
 
+    .debug-panel {
+      margin-top: 16px;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 11px;
+      text-align: left;
+      display: none;
+    }
+
+    .debug-panel.show {
+      display: block;
+    }
+
+    .debug-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .debug-label {
+      color: #94a3b8;
+    }
+
+    .debug-log {
+      background: #111827;
+      border-radius: 8px;
+      padding: 8px;
+      max-height: 140px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+
     .waves {
       display: none;
       justify-content: center;
@@ -461,6 +496,25 @@
    </div>
    <div id="redactionNotice" class="redaction-notice" style="display: none;"></div>
    <div id="result" class="result-content"></div>
+   <div id="debugPanel" class="debug-panel">
+     <div class="debug-row">
+       <span class="debug-label">Mic state</span>
+       <span id="debugMicState">idle</span>
+     </div>
+     <div class="debug-row">
+       <span class="debug-label">Peak level</span>
+       <span id="debugPeak">0</span>
+     </div>
+     <div class="debug-row">
+       <span class="debug-label">Blob size</span>
+       <span id="debugBlob">0</span>
+     </div>
+     <div class="debug-row">
+       <span class="debug-label">Device</span>
+       <span id="debugDevice">unknown</span>
+     </div>
+     <div class="debug-log" id="debugLog"></div>
+   </div>
  </div>
   </div>
 
@@ -486,6 +540,18 @@
   const waves = document.getElementById('waves');
   const audioLevel = document.getElementById('audioLevel');
   const recordingTimer = document.getElementById('recordingTimer');
+  const debugPanel = document.getElementById('debugPanel');
+  const debugMicState = document.getElementById('debugMicState');
+  const debugPeak = document.getElementById('debugPeak');
+  const debugBlob = document.getElementById('debugBlob');
+  const debugDevice = document.getElementById('debugDevice');
+  const debugLog = document.getElementById('debugLog');
+
+  function logDebug(message) {
+    debugPanel.classList.add('show');
+    const ts = new Date().toLocaleTimeString();
+    debugLog.textContent = `[${ts}] ${message}\n` + debugLog.textContent;
+  }
 
   function updateStatus(text, state = '') {
     status.textContent = text;
@@ -555,6 +621,9 @@
     result.textContent = '';
     updateStatus('Click the microphone to start recording');
     redactionNotice.style.display = 'none';
+    debugMicState.textContent = 'idle';
+    debugPeak.textContent = '0';
+    debugBlob.textContent = '0';
   }
 
   function startAudioLevelMonitoring() {
@@ -624,6 +693,13 @@
       isRecording = true;
 
       audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      debugMicState.textContent = 'recording';
+      logDebug('getUserMedia: granted');
+      const tracks = audioStream.getAudioTracks();
+      if (tracks.length > 0) {
+        const settings = tracks[0].getSettings();
+        debugDevice.textContent = settings.deviceId ? 'selected' : 'default';
+      }
       const source = audioContext.createMediaStreamSource(audioStream);
       analyser = audioContext.createAnalyser();
       source.connect(analyser);
@@ -638,6 +714,9 @@
         stopAudioLevelMonitoring();
         stopRecordingTimer();
         const blob = new Blob(chunks, { type: 'audio/webm' });
+        debugBlob.textContent = `${blob.size}`;
+        debugMicState.textContent = 'processing';
+        logDebug(`recording stopped: blob=${blob.size} bytes, peak=${peakAudioLevel.toFixed(1)}`);
         await sendAudio(blob);
         
         if (audioStream) {
@@ -651,6 +730,8 @@
       startRecordingTimer();
     } catch (error) {
       console.error('Error starting recording:', error);
+      debugMicState.textContent = 'error';
+      logDebug(`getUserMedia error: ${error && error.name ? error.name : error}`);
       updateStatus('❌ Error accessing microphone');
       micButton.classList.remove('recording');
       waves.classList.remove('show');
@@ -685,6 +766,7 @@
       // Validation: Check file size
       if (blob.size < MIN_FILE_SIZE) {
         micButton.classList.remove('processing');
+        logDebug(`validation failed: blob too small (${blob.size} < ${MIN_FILE_SIZE})`);
         updateStatus('❌ Recording too quiet or too short');
         showResult(
           `Error: Recording appears to be empty or too quiet.\n\nSuggestions:\n` +
@@ -702,6 +784,7 @@
       // Validation: Check if peak audio level is too low
       if (peakAudioLevel < MIN_AUDIO_LEVEL) {
         micButton.classList.remove('processing');
+        logDebug(`validation failed: peak too low (${peakAudioLevel.toFixed(1)} < ${MIN_AUDIO_LEVEL})`);
         updateStatus('❌ No sound detected');
         showResult(
           `Error: Microphone didn't pick up clear audio.\n\n` +
@@ -723,6 +806,7 @@
         method: 'POST', 
         body: form 
       });
+      logDebug(`upload status: ${res.status}`);
 
       const data = await res.json();
       
@@ -738,6 +822,7 @@
 
     } catch (error) {
       console.error('Error sending audio:', error);
+      logDebug(`send error: ${error && error.message ? error.message : error}`);
       micButton.classList.remove('processing');
       updateStatus('❌ Analysis error - Try again');
       showResult(`Error: ${error.message}\n\nPlease verify the server is running.`, true);
